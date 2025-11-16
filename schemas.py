@@ -1,48 +1,97 @@
 """
-Database Schemas
+Database Schemas for Proton
 
-Define your MongoDB collection schemas here using Pydantic models.
-These schemas are used for data validation in your application.
-
-Each Pydantic model represents a collection in your database.
-Model name is converted to lowercase for the collection name:
-- User -> "user" collection
-- Product -> "product" collection
-- BlogPost -> "blogs" collection
+Each Pydantic model represents a MongoDB collection with the collection name as the lowercase of the class name.
 """
+from pydantic import BaseModel, Field, EmailStr
+from typing import Optional, List, Literal
+from datetime import datetime
 
-from pydantic import BaseModel, Field
-from typing import Optional
-
-# Example schemas (replace with your own):
+Role = Literal["vendor", "buyer", "investor", "employee", "admin"]
+KYCStatus = Literal["pending", "approved", "rejected"]
+OrderStatus = Literal["draft", "submitted", "in_progress", "completed", "cancelled"]
+InvestmentStatus = Literal["initiated", "processing", "successful", "failed", "refunded"]
+ApplicationStatus = Literal["applied", "review", "interview", "offer", "rejected", "hired"]
 
 class User(BaseModel):
-    """
-    Users collection schema
-    Collection name: "user" (lowercase of class name)
-    """
-    name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+    name: str
+    email: EmailStr
+    phone: Optional[str] = None
+    role: Role
+    password_hash: str
+    kyc_status: KYCStatus = "pending"
+    company_id: Optional[str] = None
+    is_active: bool = True
 
-class Product(BaseModel):
-    """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
-    """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
+class Company(BaseModel):
+    name: str
+    description: Optional[str] = None
+    address: Optional[str] = None
+    certifications: List[str] = []
+    categories: List[str] = []
+    capacity_per_month: Optional[int] = None
+    contact_email: Optional[EmailStr] = None
+    contact_phone: Optional[str] = None
 
-# Add your own schemas here:
-# --------------------------------------------------
+class Vendorprofile(BaseModel):
+    # vendorprofile -> collection name "vendorprofile"
+    user_id: str
+    company_id: Optional[str] = None
+    capabilities: List[str] = []
+    compliance_docs: List[str] = []  # URLs to S3/Cloudinary
+    approved: bool = False
 
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+class Productlisting(BaseModel):
+    # productlisting -> collection name "productlisting"
+    vendor_id: str
+    title: str
+    specs: Optional[str] = None
+    category: Optional[str] = None
+    unit_price: Optional[float] = None
+    images: List[str] = []
+    in_stock: bool = True
+
+class Buyerrequirement(BaseModel):
+    # buyerrequirement -> collection name "buyerrequirement"
+    buyer_id: str
+    title: str
+    description: Optional[str] = None
+    budget: Optional[float] = None
+    deadline: Optional[str] = None
+    status: OrderStatus = "submitted"
+
+class Investmentproject(BaseModel):
+    # investmentproject -> collection name "investmentproject"
+    title: str
+    description: Optional[str] = None
+    target_amount: float
+    expected_roi_pct: float
+    duration_months: int
+    owner_vendor_id: Optional[str] = None
+    milestones: List[str] = []
+
+class Transaction(BaseModel):
+    investor_id: str
+    project_id: str
+    amount: float
+    status: InvestmentStatus = "initiated"
+
+class Joblisting(BaseModel):
+    title: str
+    company_id: Optional[str] = None
+    location: Optional[str] = None
+    skills: List[str] = []
+    min_exp_years: Optional[int] = None
+    description: Optional[str] = None
+
+class Jobapplication(BaseModel):
+    job_id: str
+    user_id: str
+    status: ApplicationStatus = "applied"
+    resume_url: Optional[str] = None
+
+class Kycrecord(BaseModel):
+    user_id: str
+    provider: Literal["digilocker"] = "digilocker"
+    reference_id: Optional[str] = None
+    status: KYCStatus = "pending"
